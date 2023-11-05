@@ -173,11 +173,171 @@ class Excel {
 
             if (rowHead->down){
                 // if there is a row below the selected row
+
+                Cell<T> *nextRowHead = rowHead->down;
+                Cell<T> *nextPointer = nextRowHead->right;
+                Cell<T> *currPointer = rowHead->right;
+
+                Cell <T> *newRowHead = new Cell<T>();
+                nextRowHead->up = newRowHead;
+                newRowHead->down = nextRowHead;
+                newRowHead->up = rowHead;
+                rowHead->down = newRowHead;
+
+                Cell<T> *newRowPointer = newRowHead;
+
+                for (int i = 1; i < cols; i++){
+
+                    Cell<T> *newCell = new Cell<T>();
+                    newRowPointer->right = newCell;
+                    newCell->left = newRowPointer;
+
+                    nextPointer->up = newCell;
+                    newCell->down = nextPointer;
+
+                    currPointer->down = newCell;
+                    newCell->up = currPointer;
+
+                    newRowPointer = newCell;
+                    nextPointer = nextPointer->right;
+                    currPointer = currPointer->right;
+
+                }
             }
             else{
                 // this is the last row
+                Cell<T> *newRowHead = new Cell<T>();
+                Cell<T> *temp = rowHead->right;
+                rowHead->down = newRowHead;
+                newRowHead->up = rowHead;
+
+                Cell<T> *curr = newRowHead;
+                for (int i = 1; i < cols; i++){
+                    Cell<T> *newCell = new Cell<T>();
+                    newCell->left = curr;
+                    curr->right = newCell;
+                    temp->down = newCell;
+                    newCell->up = temp;
+                    temp = temp->right;
+                    curr = newCell;
+                }
 
             }
+            rows++;
+        }
+
+        void insertRight(){
+            
+            // get the first cell of the selected column
+            Cell<T> *colHead = selected;
+            while (colHead->up != nullptr){
+                colHead = colHead->up;
+            }
+
+            if (colHead->right){
+                // if there is a column to the right of the selected column
+
+                Cell<T> *nextColHead = colHead->right;
+                Cell<T> *nextPointer = nextColHead->down;
+                Cell<T> *currPointer = colHead->down;
+                Cell<T> *newColHead = new Cell<T>();
+                newColHead->left = colHead;
+                colHead->right = newColHead;
+                newColHead->right = nextColHead;
+                nextColHead->left = newColHead;
+
+                for (int i = 1; i < rows; i++){
+                    Cell<T> *newCell = new Cell<T>();
+                    newColHead->down = newCell;
+                    newCell->up = newColHead;
+                    nextPointer->left = newCell;
+                    newCell->right = nextPointer;
+                    currPointer->right = newCell;
+                    newCell->left = currPointer;
+
+                    newColHead = newCell;
+                    nextPointer = nextPointer->down;
+                    currPointer = currPointer->down;
+                }
+            }
+            else{
+                // if it is the last column
+                Cell<T> *newColHead = new Cell<T>();
+                Cell<T> *temp = colHead->down;
+                colHead->right = newColHead;
+                newColHead->left = colHead;
+                Cell<T> *curr = newColHead;
+
+                for (int i = 1; i < rows; i++){
+                    Cell<T> *newCell = new Cell<T>();
+                    curr->down = newCell;
+                    newCell->up = curr;
+                    temp->right = newCell;
+                    newCell->left = temp;
+
+                    curr = newCell;
+                    temp = temp->down;
+                }
+            }
+
+            cols++;
+        }
+
+        void insertLeft(){
+
+            // get the first cell of the selected column
+            Cell<T> *colHead = selected;
+            while (colHead->up != nullptr){
+                colHead = colHead->up;
+            }
+
+            if (colHead->left){
+                // if there is a column to the left of the selected column
+
+                Cell<T> *prevColHead = colHead->left;
+                Cell<T> *prevPointer = prevColHead->down;
+                Cell<T> *currPointer = colHead->down;
+                Cell<T> *newColHead = new Cell<T>();
+                newColHead->right = colHead;
+                colHead->left = newColHead;
+                newColHead->left = prevColHead;
+                prevColHead->right = newColHead;
+
+                for (int i = 1; i < rows; i++){
+                    Cell<T> *newCell = new Cell<T>();
+                    newColHead->down = newCell;
+                    newCell->up = newColHead;
+                    prevPointer->right = newCell;
+                    newCell->left = prevPointer;
+                    currPointer->left = newCell;
+                    newCell->right = currPointer;
+
+                    newColHead = newCell;
+                    prevPointer = prevPointer->down;
+                    currPointer = currPointer->down;
+                }
+            }
+            else{
+                // if this is the first column
+
+                Cell<T> *newColHead = new Cell<T>();
+                Cell<T> *temp = colHead->down;
+                colHead->left = newColHead;
+                newColHead->right = colHead;
+                head = newColHead;
+
+                for (int i = 1; i < rows; i++){
+                    Cell<T> *newCell = new Cell<T>();
+                    newColHead->down = newCell;
+                    newCell->up = newColHead;
+                    temp->left = newCell;
+                    newCell->right = temp;
+
+                    newColHead = newCell;
+                    temp = temp->down;
+                }
+            }
+            cols++;
         }
 
         print(){
@@ -206,6 +366,8 @@ void printKeyManual(){
     cout << "Use escape to exit" << endl;
     cout << "Press A to insert row above selected cell" << endl;
     cout << "Press B to insert row below selected cell" << endl;
+    cout << "Press R to insert row below selected cell" << endl;
+    cout << "Press L to insert row below selected cell" << endl;
 }
 
 int main(){
@@ -247,11 +409,24 @@ int main(){
             string data;
             cin >> data;
             excel->selected->data = data;
+            cin.ignore();
 
             modify = true;
         }
-        if (GetAsyncKeyState('A')){
+        else if (GetAsyncKeyState('A')){
             excel->insertAbove();
+            modify = true;
+        }
+        else if (GetAsyncKeyState('B')){
+            excel->insertBelow();
+            modify = true;
+        }
+        else if (GetAsyncKeyState('R')){
+            excel->insertRight();
+            modify = true;
+        }
+        else if (GetAsyncKeyState('L')){
+            excel->insertLeft();
             modify = true;
         }
         if (GetAsyncKeyState(VK_ESCAPE)){
