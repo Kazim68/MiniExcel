@@ -206,24 +206,28 @@ class Excel {
             }
             else{
                 // this is the last row
-                Cell<T> *newRowHead = new Cell<T>();
-                Cell<T> *temp = rowHead->right;
-                rowHead->down = newRowHead;
-                newRowHead->up = rowHead;
-
-                Cell<T> *curr = newRowHead;
-                for (int i = 1; i < cols; i++){
-                    Cell<T> *newCell = new Cell<T>();
-                    newCell->left = curr;
-                    curr->right = newCell;
-                    temp->down = newCell;
-                    newCell->up = temp;
-                    temp = temp->right;
-                    curr = newCell;
-                }
+                makeNewRowAtBottom(rowHead);
 
             }
             rows++;
+        }
+
+        void makeNewRowAtBottom(Cell<T> *rowHead){
+            Cell<T> *newRowHead = new Cell<T>();
+            Cell<T> *temp = rowHead->right;
+            rowHead->down = newRowHead;
+            newRowHead->up = rowHead;
+
+            Cell<T> *curr = newRowHead;
+            for (int i = 1; i < cols; i++){
+                Cell<T> *newCell = new Cell<T>();
+                newCell->left = curr;
+                curr->right = newCell;
+                temp->down = newCell;
+                newCell->up = temp;
+                temp = temp->right;
+                curr = newCell;
+            }
         }
 
         void insertRight(){
@@ -370,16 +374,23 @@ class Excel {
             Cell<T> *current = selected;
             temp = current->left;
 
+            Cell<T> *newCell = new Cell<T>();
+            if (temp){
+                temp->right = newCell;
+                newCell->left = temp;
+            }
+            newCell->right = current;
+            current->left = newCell;
+
+            temp = newCell;
+
             // if it is the first row
             if (!current->up){
                 Cell<T> *below = current->down;
-                Cell<T> *newCell = new Cell<T>();
-                temp->right = newCell;
-                newCell->left = temp;
-                newCell->right = current;
-                current->left = newCell;
 
-                temp = newCell;
+                if (selected == head){
+                    head = newCell;
+                }
 
                 while (below){
                     temp->down = below;
@@ -393,13 +404,6 @@ class Excel {
             else if (!current->down){
                 // if it is the last row
                 Cell<T> *above = current->up;
-                Cell<T> *newCell = new Cell<T>();
-                temp->right = newCell;
-                newCell->left = temp;
-                newCell->right = current;
-                current->left = newCell;
-
-                temp = newCell;
 
                 while (above){
                     temp->up = above;
@@ -414,13 +418,6 @@ class Excel {
                 // if it is a middle row
                 Cell<T> *above = current->up;
                 Cell<T> *below = current->down;
-                Cell<T> *newCell = new Cell<T>();
-                temp->right = newCell;
-                newCell->left = temp;
-                newCell->right = current;
-                current->left = newCell;
-    
-                temp = newCell;
 
                 while (above){
                     temp->up = above;
@@ -436,6 +433,100 @@ class Excel {
             }
             temp->left->right = nullptr;
             cols++;
+        }
+
+        void insertCellByDownShift(){
+            // insert a new row at the bottom most end first
+            Cell<T> *temp = selected;
+
+            // get to the bottom most end left cell
+            while (temp->down != nullptr){
+                temp = temp->down;
+            }
+
+            while (temp->left != nullptr){
+                temp = temp->left;
+            }
+
+            // now temp is the bottom left most cell
+            // inserting a new row at the bottom most end
+            makeNewRowAtBottom(temp);
+
+            // from selected cell, down shift all the cells
+            Cell<T> *current = selected;
+            temp = current->up;
+
+            Cell<T> *newCell = new Cell<T>();
+            if (temp){
+                temp->down = newCell;
+                newCell->up = temp;
+            }
+            newCell->down = current;
+            current->up = newCell;
+
+            temp = newCell;
+
+            if (!current->left){
+                // it is the first column
+                Cell<T> *right = current->right;
+
+                if (selected == head){
+                    head = newCell;
+                }
+
+                while (right){
+                    temp->right = right;
+                    right->left = temp;
+
+                    temp = temp->down;
+                    right = right->down;
+                }
+            }
+            else if (!current->right){
+                // it is the last column
+                Cell<T> *left = current->left;
+
+                while (left){
+                    temp->left = left;
+                    left->right = temp;
+
+                    temp = temp->down;
+                    left = left->down;
+                }
+            }
+            else{
+                // it is a middle column
+                Cell<T> *left = current->left;
+                Cell<T> *right = current->right;
+
+                while (right){
+                    temp->right = right;
+                    right->left = temp;
+                    left->right = temp;
+                    temp->left = left;
+
+                    temp = temp->down;
+                    right = right->down;
+                    left = left->down;
+                }
+            }
+
+            temp->up->down = nullptr;
+            rows++;
+        }
+
+        void deleteCellByLeftShift(){
+            Cell<T> *current = selected;
+
+            if (!current->left){
+                // it is the first column
+            }
+            else if (!current->right){
+                // it is the last column
+            }
+            else{
+                // it is a middle column
+            }
         }
 
         print(){
@@ -468,6 +559,7 @@ void printKeyManual(){
     cout << "Press L to insert column to the left of selected cell" << endl;
     cout << "Press CTRL to insert cells by right shift" << endl;
     cout << "Press Shift to insert cells by down shift" << endl;
+    cout << "Press Alt to delete cells by left shift" << endl;
 }
 
 int main(){
@@ -531,6 +623,10 @@ int main(){
         }
         else if (GetAsyncKeyState(VK_CONTROL)){
             excel->insertCellByRightShift();
+            modify = true;
+        }
+        else if (GetAsyncKeyState(VK_SHIFT)){
+            excel->insertCellByDownShift();
             modify = true;
         }
         if (GetAsyncKeyState(VK_ESCAPE)){
