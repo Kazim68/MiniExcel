@@ -262,25 +262,29 @@ class Excel {
             }
             else{
                 // if it is the last column
-                Cell<T> *newColHead = new Cell<T>();
-                Cell<T> *temp = colHead->down;
-                colHead->right = newColHead;
-                newColHead->left = colHead;
-                Cell<T> *curr = newColHead;
-
-                for (int i = 1; i < rows; i++){
-                    Cell<T> *newCell = new Cell<T>();
-                    curr->down = newCell;
-                    newCell->up = curr;
-                    temp->right = newCell;
-                    newCell->left = temp;
-
-                    curr = newCell;
-                    temp = temp->down;
-                }
+                makeNewColumnAtRight(colHead);
             }
 
             cols++;
+        }
+
+        void makeNewColumnAtRight(Cell<T> *colHead){
+            Cell<T> *newColHead = new Cell<T>();
+            Cell<T> *temp = colHead->down;
+            colHead->right = newColHead;
+            newColHead->left = colHead;
+            Cell<T> *curr = newColHead;
+
+            for (int i = 1; i < rows; i++){
+                Cell<T> *newCell = new Cell<T>();
+                curr->down = newCell;
+                newCell->up = curr;
+                temp->right = newCell;
+                newCell->left = temp;
+
+                curr = newCell;
+                temp = temp->down;
+            }
         }
 
         void insertLeft(){
@@ -319,24 +323,118 @@ class Excel {
             }
             else{
                 // if this is the first column
-
-                Cell<T> *newColHead = new Cell<T>();
-                Cell<T> *temp = colHead->down;
-                colHead->left = newColHead;
-                newColHead->right = colHead;
-                head = newColHead;
-
-                for (int i = 1; i < rows; i++){
-                    Cell<T> *newCell = new Cell<T>();
-                    newColHead->down = newCell;
-                    newCell->up = newColHead;
-                    temp->left = newCell;
-                    newCell->right = temp;
-
-                    newColHead = newCell;
-                    temp = temp->down;
-                }
+                makeNewColumnAtLeft(colHead);
+                
             }
+            cols++;
+        }
+
+        void makeNewColumnAtLeft(Cell<T> *colHead){
+            Cell<T> *newColHead = new Cell<T>();
+            Cell<T> *temp = colHead->down;
+            colHead->left = newColHead;
+            newColHead->right = colHead;
+            head = newColHead;
+
+            for (int i = 1; i < rows; i++){
+                Cell<T> *newCell = new Cell<T>();
+                newColHead->down = newCell;
+                newCell->up = newColHead;
+                temp->left = newCell;
+                newCell->right = temp;
+
+                newColHead = newCell;
+                temp = temp->down;
+            }
+        }
+
+        void insertCellByRightShift(){
+
+            // insert a new column at the right most end first
+            Cell<T> *temp = selected;
+            
+            // getting to the right most end top cell
+            while (temp->right != nullptr){
+                temp = temp->right;
+            }
+
+            while (temp->up != nullptr){
+                temp = temp->up;
+            }
+
+            // now temp is the top right most cell
+            // inserting a new column at the right most end
+            makeNewColumnAtRight(temp);
+
+            // from selected cell, right shift all the cells
+            Cell<T> *current = selected;
+            temp = current->left;
+
+            // if it is the first row
+            if (!current->up){
+                Cell<T> *below = current->down;
+                Cell<T> *newCell = new Cell<T>();
+                temp->right = newCell;
+                newCell->left = temp;
+                newCell->right = current;
+                current->left = newCell;
+
+                temp = newCell;
+
+                while (below){
+                    temp->down = below;
+                    below->up = temp;
+
+                    temp = temp->right;
+                    below = below->right;
+                }
+
+            }
+            else if (!current->down){
+                // if it is the last row
+                Cell<T> *above = current->up;
+                Cell<T> *newCell = new Cell<T>();
+                temp->right = newCell;
+                newCell->left = temp;
+                newCell->right = current;
+                current->left = newCell;
+
+                temp = newCell;
+
+                while (above){
+                    temp->up = above;
+                    above->down = temp;
+
+                    temp = temp->right;
+                    above = above->right;
+                }
+
+            } 
+            else {
+                // if it is a middle row
+                Cell<T> *above = current->up;
+                Cell<T> *below = current->down;
+                Cell<T> *newCell = new Cell<T>();
+                temp->right = newCell;
+                newCell->left = temp;
+                newCell->right = current;
+                current->left = newCell;
+    
+                temp = newCell;
+
+                while (above){
+                    temp->up = above;
+                    above->down = temp;
+                    below->up = temp;
+                    temp->down = below;
+
+                    temp = temp->right;
+                    above = above->right;
+                    below = below->right;
+                }
+
+            }
+            temp->left->right = nullptr;
             cols++;
         }
 
@@ -366,8 +464,10 @@ void printKeyManual(){
     cout << "Use escape to exit" << endl;
     cout << "Press A to insert row above selected cell" << endl;
     cout << "Press B to insert row below selected cell" << endl;
-    cout << "Press R to insert row below selected cell" << endl;
-    cout << "Press L to insert row below selected cell" << endl;
+    cout << "Press R to insert column to the right of selected cell" << endl;
+    cout << "Press L to insert column to the left of selected cell" << endl;
+    cout << "Press CTRL to insert cells by right shift" << endl;
+    cout << "Press Shift to insert cells by down shift" << endl;
 }
 
 int main(){
@@ -427,6 +527,10 @@ int main(){
         }
         else if (GetAsyncKeyState('L')){
             excel->insertLeft();
+            modify = true;
+        }
+        else if (GetAsyncKeyState(VK_CONTROL)){
+            excel->insertCellByRightShift();
             modify = true;
         }
         if (GetAsyncKeyState(VK_ESCAPE)){
