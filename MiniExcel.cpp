@@ -11,8 +11,6 @@ class Cell {
         Cell<T> *left;
         Cell<T> *right;
         bool active;
-        int row;
-        int col;
         string color;
 
         Cell() {
@@ -518,18 +516,292 @@ class Excel {
         void deleteCellByLeftShift(){
             Cell<T> *current = selected;
 
+            // a new cell will be added to the end of the selected row
+            Cell<T> *temp = current;
+
+            while (temp->right != nullptr){
+                temp = temp->right;
+            }
+
+            Cell<T> *newCell = new Cell<T>();
+            temp->right = newCell;
+            newCell->left = temp;
+
+            // deleting the selected cell
+            temp = current->left;
+                
+            if (temp){
+                temp->right = current->right;
+                current->right->left = temp;    
+            }
+            else{
+                // if it is the first column
+                current->right->left = nullptr;
+            }
+
+            // left shifting the cells
+            if (!current->up){
+                // it is the first row
+                Cell<T> *below = current->down;
+                temp = current->right;
+
+                while (temp){
+                    below->up = temp;
+                    temp->down = below;
+
+                    temp = temp->right;
+                    below = below->right;
+                }
+
+                if (selected == head){
+                    head = current->right;
+                }
+            }
+            else if (!current->down){
+                // it is the last row
+                Cell<T> *above = current->up;
+                temp = current->right;
+
+                while (temp){
+                    above->down = temp;
+                    temp->up = above;
+
+                    temp = temp->right;
+                    above = above->right;
+                }
+            }
+            else{
+                // it is a middle row
+                Cell<T> *below = current->down;
+                Cell<T> *above = current->up;
+                temp = current->right;
+
+                while (temp){
+                    below->up = temp;
+                    temp->down = below;
+                    above->down = temp;
+                    temp->up = above;
+
+                    temp = temp->right;
+                    below = below->right;
+                    above = above->right;
+                }
+            }
+
+            selected = current->right;
+        }
+
+        void deleteCellByUpShift(){
+            Cell<T> *current = selected;
+            Cell<T> *temp = current;
+
+            // a new cell will be added to the end of the selected column
+            while (temp->down != nullptr){
+                temp = temp->down;
+            }
+
+            Cell<T> *newCell = new Cell<T>();
+            temp->down = newCell;
+            newCell->up = temp;
+
+            // deleting the selected cell
+            temp = current->up;
+
+            if(temp){
+                temp->down = current->down;
+                current->down->up = temp;
+            }
+            else{
+                // if it is the first row
+                current->down->up = nullptr;
+            }
+
+            // up shifting the cells
             if (!current->left){
                 // it is the first column
+                Cell<T> *right = current->right;
+                temp = current->down;
+
+                while(temp){
+                    temp->right = right;
+                    right->left = temp;
+
+                    temp = temp->down;
+                    right = right->down;
+                }
+
+                if (selected == head){
+                    head = current->down;
+                }
             }
             else if (!current->right){
                 // it is the last column
+                Cell<T> *left = current->left;
+                temp = current->down;
+
+                while(temp){
+                    temp->left = left;
+                    left->right = temp;
+
+                    temp = temp->down;
+                    left = left->down;
+                }
             }
             else{
                 // it is a middle column
+                Cell<T> *right = current->right;
+                Cell<T> *left = current->left;
+                temp = current->down;
+
+                while(temp){
+                    temp->right = right;
+                    right->left = temp;
+                    temp->left = left;
+                    left->right = temp;
+
+                    temp = temp->down;
+                    right = right->down;
+                    left = left->down;
+                }
+            }
+
+            selected = current->down;
+        }
+
+        void deleteColumn(){
+            Cell<T> *current = selected;
+            Cell<T> *temp = current;
+
+            // getting to the top of selected column
+            while (temp->up != nullptr){
+                temp = temp->up;
+            }
+
+            // deleting the selected column
+            if (!temp->left){
+                // it is the first column
+                head = temp->right;
+                Cell<T> *right = temp->right;
+
+                while (right){
+                    right->left = nullptr;
+                    right = right->down;
+                }
+
+                selected = current->right;
+            }
+            else if (!temp->right){
+                // it is the last column
+                Cell<T> *left = temp->left;
+
+                while (left){
+                    left->right = nullptr;
+                    left = left->down;
+                }
+
+                selected = current->left;
+            }
+            else{
+                // it is a middle column
+                Cell<T> *left = temp->left;
+                Cell<T> *right = temp->right;
+
+                while (left){
+                    left->right = right;
+                    right->left = left;
+
+                    left = left->down;
+                    right = right->down;
+                }
+
+                selected = current->left;
+            }
+
+            cols--;
+        }
+
+        void deleteRow(){
+            Cell<T> *current = selected;
+            Cell<T> *temp = current;
+
+            // getting to the extreme left of selected row
+            while (temp->left != nullptr){
+                temp = temp->left;
+            }
+
+            // deleting the selected row
+            if (!temp->up){
+                // it is the first row
+                head = head->down;
+                Cell<T> *down = temp->down;
+
+                while (down){
+                    down->up = nullptr;
+                    down = down->right;
+                }
+
+                selected = current->down;
+            }
+            else if (!temp->down){
+                // it is the last row
+                Cell<T> *up = temp->up;
+
+                while (up){
+                    up->down = nullptr;
+                    up = up->right;
+                }
+
+                selected = current->up;
+            }
+            else{
+                // it is a middle row
+                Cell<T> *up = temp->up;
+                Cell<T> *down = temp->down;
+
+                while (up){
+                    up->down = down;
+                    down->up = up;
+
+                    up = up->right;
+                    down = down->right;
+                }
+
+                selected = current->up;
+            }
+
+            rows--;
+        }
+
+        void clearColumn(){
+            Cell<T> *current = selected;
+
+            // getting to the top of column
+            while (current->up != nullptr){
+                current = current->up;
+            }
+
+            // clearing the column
+            while (current){
+                current->data = "0";
+                current = current->down;
             }
         }
 
-        print(){
+        void clearRow(){
+            Cell<T> *current = selected;
+
+            // getting to the left of row
+            while (current->left != nullptr){
+                current = current->left;
+            }
+
+            while (current){
+                current->data = "0";
+                current = current->right;
+            }
+        }
+
+        void print(){
             Cell<T> *temp = head;
             Cell<T> *rowTraverser;
             for (int i = 0; i <= cols; i++){
@@ -549,17 +821,26 @@ class Excel {
         }
 };
 
+void RangeSelection(){
+
+}
+
 void printKeyManual(){
     cout << "Use arrow keys to navigate" << endl;
     cout << "Use space to enter data" << endl;
     cout << "Use escape to exit" << endl;
-    cout << "Press A to insert row above selected cell" << endl;
-    cout << "Press B to insert row below selected cell" << endl;
-    cout << "Press R to insert column to the right of selected cell" << endl;
-    cout << "Press L to insert column to the left of selected cell" << endl;
-    cout << "Press CTRL to insert cells by right shift" << endl;
-    cout << "Press Shift to insert cells by down shift" << endl;
-    cout << "Press Alt to delete cells by left shift" << endl;
+    cout << "Press CTRL + A to insert row above selected cell" << endl;
+    cout << "Press CTRL + B to insert row below selected cell" << endl;
+    cout << "Press CTRL + R to insert column to the right of selected cell" << endl;
+    cout << "Press CTRL + L to insert column to the left of selected cell" << endl;
+    cout << "Press CTRL + I to insert cells by right shift" << endl;
+    cout << "Press CTRL + K to insert cells by down shift" << endl;
+    cout << "Press CTRL + O to delete cells by left shift" << endl;
+    cout << "Press CTRL + U to delete cells by up shift" << endl;
+    cout << "Press CTRL + D to delete column" << endl;
+    cout << "Press CTRL + E to delete row" << endl;
+    cout << "Press CTRL + M to clear column" << endl;
+    cout << "Press CTRL + N to clear row" << endl;
 }
 
 int main(){
@@ -605,32 +886,63 @@ int main(){
 
             modify = true;
         }
-        else if (GetAsyncKeyState('A')){
-            excel->insertAbove();
-            modify = true;
-        }
-        else if (GetAsyncKeyState('B')){
-            excel->insertBelow();
-            modify = true;
-        }
-        else if (GetAsyncKeyState('R')){
-            excel->insertRight();
-            modify = true;
-        }
-        else if (GetAsyncKeyState('L')){
-            excel->insertLeft();
-            modify = true;
-        }
         else if (GetAsyncKeyState(VK_CONTROL)){
-            excel->insertCellByRightShift();
-            modify = true;
+
+            if (GetAsyncKeyState('A')){
+                excel->insertAbove();
+                modify = true;
+            }
+            else if (GetAsyncKeyState('B')){
+                excel->insertBelow();
+                modify = true;
+            }
+            else if (GetAsyncKeyState('R')){
+                excel->insertRight();
+                modify = true;
+            }
+            else if (GetAsyncKeyState('L')){
+                excel->insertLeft();
+                modify = true;
+            }
+            else if (GetAsyncKeyState('I')){
+                excel->insertCellByRightShift();
+                modify = true;
+            }
+            else if (GetAsyncKeyState('K')){
+                excel->insertCellByDownShift();
+                modify = true;
+            }
+            else if (GetAsyncKeyState('O')){
+                excel->deleteCellByLeftShift();
+                modify = true;
+            }
+            else if (GetAsyncKeyState('U')){
+                excel->deleteCellByUpShift();
+                modify = true;
+            }
+            else if (GetAsyncKeyState('D')){
+                excel->deleteColumn();
+                modify = true;
+            }
+            else if (GetAsyncKeyState('E')){
+                excel->deleteRow();
+                modify = true;
+            }
+            else if (GetAsyncKeyState('M')){
+                excel->clearColumn();
+                modify = true;
+            }
+            else if (GetAsyncKeyState('N')){
+                excel->clearRow();
+                modify = true;
+            }
         }
-        else if (GetAsyncKeyState(VK_SHIFT)){
-            excel->insertCellByDownShift();
-            modify = true;
+        if (GetAsyncKeyState(VK_F1)){
+            // range selection
         }
         if (GetAsyncKeyState(VK_ESCAPE)){
             running = false;
+            system("cls");
         }
 
         if (modify){
