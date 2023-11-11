@@ -1,6 +1,17 @@
 #include <iostream>
 #include <windows.h>
+#include <vector>
+#include <string>
+#include <limits.h>
 using namespace std;
+
+// utility to convert anything to a string
+#include <sstream>
+template<typename T> std::string tostring(const T& x) {
+    std::ostringstream os;
+    os << x;
+    return os.str();
+}
 
 template <typename T>
 class Cell {
@@ -11,6 +22,8 @@ class Cell {
         Cell<T> *left;
         Cell<T> *right;
         bool active;
+        int row;
+        int col;
         string color;
 
         Cell() {
@@ -821,62 +834,333 @@ class Excel {
         }
 };
 
-void RangeSelection(){
+template <typename T>
+class Range{
+    public:
+        Excel<T> *excel;
+        Cell<T> *start;
+        Cell<T> *end;
+        vector<Cell<T>*> *cells;
+        vector<T> *data;
 
-}
+        Range(Excel<T> excel){
+            this->excel = excel;
+            this->start = nullptr;
+            this->end = nullptr;
+            cells = new vector<Cell<T>>();
+        }
 
-void printKeyManual(){
-    cout << "Use arrow keys to navigate" << endl;
-    cout << "Use space to enter data" << endl;
-    cout << "Use escape to exit" << endl;
-    cout << "Press CTRL + A to insert row above selected cell" << endl;
-    cout << "Press CTRL + B to insert row below selected cell" << endl;
-    cout << "Press CTRL + R to insert column to the right of selected cell" << endl;
-    cout << "Press CTRL + L to insert column to the left of selected cell" << endl;
-    cout << "Press CTRL + I to insert cells by right shift" << endl;
-    cout << "Press CTRL + K to insert cells by down shift" << endl;
-    cout << "Press CTRL + O to delete cells by left shift" << endl;
-    cout << "Press CTRL + U to delete cells by up shift" << endl;
-    cout << "Press CTRL + D to delete column" << endl;
-    cout << "Press CTRL + E to delete row" << endl;
-    cout << "Press CTRL + M to clear column" << endl;
-    cout << "Press CTRL + N to clear row" << endl;
-}
+        Range(){
+            excel = nullptr;
+            start = nullptr;
+            end = nullptr;
+            cells = new vector<Cell<T>*>();
+        }
+
+        void CellLabeler(){
+            // giving each cell row and column number
+            int r = excel->rows;
+            int c = excel->cols;
+            Cell<T> *temp = excel->head;
+            Cell<T> *rowTraverser;
+
+            for (int i = 0; i < r; i++){
+                rowTraverser = temp;
+                for (int j = 0; j < c; j++){
+                    rowTraverser->row = i;
+                    rowTraverser->col = j;
+                    rowTraverser = rowTraverser->right;
+                }
+                temp = temp->down;
+            }
+        }
+
+        void fillVector(){
+            // if start is at right of end and above
+            if (start->col <= end->col && start->row >= end->row){
+                Cell<T> *temp = start;
+                Cell<T> *rowTraverser = temp;
+                for (int i = start->row; i >= end->row; i--){
+                    for (int j = start->col; j <= end->col; j++){
+                        cells->push_back(temp);
+                        temp = temp->right;
+                    }
+                    rowTraverser = rowTraverser->up;
+                    temp = rowTraverser;
+                }
+            }
+            else if (start->col <= end->col && start->row < end->row){
+                // if start is at right of end and below
+                Cell<T> *temp = start;
+                Cell<T> *rowTraverser = temp;
+                for (int i = start->row; i <= end->row; i++){
+                    for (int j = start->col; j <= end->col; j++){
+                        cells->push_back(temp);
+                        temp = temp->right;
+                    }
+                    rowTraverser = rowTraverser->down;
+                    temp = rowTraverser;
+                }
+            }
+            else if (start->col > end->col && start->row > end->row){
+                // if start is at left of end and above
+                Cell<T> *temp = start;
+                Cell<T> *rowTraverser = temp;
+                for (int i = start->row; i >= end->row; i--){
+                    for (int j = start->col; j >= end->col; j--){
+                        cells->push_back(temp);
+                        temp = temp->left;
+                    }
+                    rowTraverser = rowTraverser->up;
+                    temp = rowTraverser;
+                }
+            }
+            else if (start->col > end->col && start->row < end->row){
+                // if start is at left of end and below
+                Cell<T> *temp = start;
+                Cell<T> *rowTraverser = temp;
+                for (int i = start->row; i <= end->row; i++){
+                    for (int j = start->col; j >= end->col; j--){
+                        cells->push_back(temp);
+                        temp = temp->left;
+                    }
+                    rowTraverser = rowTraverser->down;
+                    temp = rowTraverser;
+                }
+            }
+        }
+
+        int calculateSum(){
+            int sum = 0;
+            string temp = "";
+            for (int i = 0; i < cells->size(); i++){
+                temp = tostring(cells->at(i)->data);
+                sum += stoi(temp);
+            }
+            return sum;
+        
+        }
+
+        float calculateAverage(){
+            return calculateSum() / cells->size();
+        }
+
+        int calculateCount(){
+            return cells->size();
+        }
+
+        int calculateMax(){
+            int max = INT_MIN;
+            string temp = "";
+            for (int i = 0; i < cells->size(); i++){
+                temp = tostring(cells->at(i)->data);
+                if (max < stoi(temp)){
+                    max = stoi(temp);
+                }
+            }
+            return max;
+        }
+
+        int calculateMin(){
+            int min = INT_MAX;
+            string temp = "";
+            for (int i = 0; i < cells->size(); i++){
+                temp = tostring(cells->at(i)->data);
+                if (min > stoi(temp)){
+                    min = stoi(temp);
+                }
+            }
+            return min;
+        }
+
+        void copy(){
+            data = new vector<T>();
+
+            for (int i = 0; i < cells->size(); i++){
+                data->push_back(cells->at(i)->data);
+            }
+        }
+
+        void cut(){
+            // copying the data
+            copy();
+
+            // deleting the cells
+            for (int i = 0; i < cells->size(); i++){
+                cells->at(i)->data = "0";
+            }
+        }
+};
+
+template <typename T>
+class FrontEnd{
+
+    public:
+
+        Excel<T> *excel;
+    
+        FrontEnd(Excel<T> excel){
+            this->excel = excel;
+        }
+
+        FrontEnd(){
+            excel = nullptr;
+        }
+
+        void printKeyManual(){
+        cout << "Use arrow keys to navigate" << endl;
+        cout << "Use space to enter data" << endl;
+        cout << "Use escape to exit" << endl;
+        cout << "Press CTRL + A to insert row above selected cell" << endl;
+        cout << "Press CTRL + B to insert row below selected cell" << endl;
+        cout << "Press CTRL + R to insert column to the right of selected cell" << endl;
+        cout << "Press CTRL + L to insert column to the left of selected cell" << endl;
+        cout << "Press CTRL + I to insert cells by right shift" << endl;
+        cout << "Press CTRL + K to insert cells by down shift" << endl;
+        cout << "Press CTRL + O to delete cells by left shift" << endl;
+        cout << "Press CTRL + U to delete cells by up shift" << endl;
+        cout << "Press CTRL + D to delete column" << endl;
+        cout << "Press CTRL + E to delete row" << endl;
+        cout << "Press CTRL + M to clear column" << endl;
+        cout << "Press CTRL + N to clear row" << endl;
+        cout << "Press F1 key to select range of cells" << endl;
+        }
+
+        void RangeSelection(Excel<T> *excel, Range<T> *range){
+            // storing current selected cell
+            Cell<T> *current = excel->selected;
+
+            // selecting cells
+            cout << "Select Starting cell..." << endl;
+
+            bool selecting = true, modify = false;
+            Sleep(50);
+            while (selecting){
+                arrowMovement("\33[35m", modify);
+                if (GetAsyncKeyState(VK_F1)){
+                    if (range->start == nullptr){
+                        range->start = excel->selected;
+                        cout << "Start cell selected" << endl;
+                        cout << "Select End cell..." << endl;
+                        modify = true;
+                    }
+                    else{
+                        range->end = excel->selected;
+                        cout << "End cell selected" << endl;
+                        selecting = false;
+                        range->start->color = "\33[37m";
+                        range->end->color = "\33[37m";
+                    }
+                }
+                Sleep(100);
+
+                if (modify){
+                    modify = false;
+                    system("cls");
+                    printKeyManual();
+                    excel->print();
+                    if (range->start != nullptr){
+                        range->start->color = "\33[35m";
+                        cout << "Start cell selected" << endl;
+                        cout << "Select end cell" << endl;
+                    }
+                    else{
+                        cout << "Select start cell" << endl;
+                    }
+                }
+            }
+
+            // resetting the selected cell to default
+            excel->selected = current;
+        }
+
+        void rangeOption(Range<T> *range){
+            string option;
+            system("cls");
+            cout << "1. Sum" << endl;
+            cout << "2. Average" << endl;
+            cout << "3. Count" << endl;
+            cout << "4. Max" << endl;
+            cout << "5. Min" << endl;
+            cout << "6. Copy" << endl;
+            cout << "7. Cut" << endl;
+            cout << "0. Back" << endl;
+            cout << "Enter option:";
+            cin >> option;
+
+            if (option == "1"){
+                // sum
+                excel->selected->data = to_string(range->calculateSum());
+            }
+            else if (option == "2"){
+                // avg
+                excel->selected->data = to_string(range->calculateAverage());
+            }
+            else if (option == "3"){
+                // count
+                excel->selected->data = to_string(range->calculateCount());
+            }
+            else if (option == "4"){
+                // max
+                excel->selected->data = to_string(range->calculateMax());
+            }
+            else if (option == "5"){
+                // min
+                excel->selected->data = to_string(range->calculateMin());
+            }
+            else if (option == "6"){
+                // copy
+                range->copy();
+            }
+            else if (option == "7"){
+                // cut
+                range->cut();
+            }   
+        }
+
+        void arrowMovement(string color, bool &modify){
+            if (GetAsyncKeyState(VK_UP) && excel->selected->up){
+                excel->selected->color = "\33[37m";
+                excel->selected = excel->selected->up;
+                excel->selected->color = color;
+                modify = true;
+            }
+            if (GetAsyncKeyState(VK_DOWN) && excel->selected->down){
+                excel->selected->color = "\33[37m";
+                excel->selected = excel->selected->down;
+                excel->selected->color = color;
+                modify = true;
+            }
+            if (GetAsyncKeyState(VK_LEFT) && excel->selected->left){
+                excel->selected->color = "\33[37m";
+                excel->selected = excel->selected->left;
+                excel->selected->color = color;
+                modify = true;
+            }
+            if (GetAsyncKeyState(VK_RIGHT) && excel->selected->right){
+                excel->selected->color = "\33[37m";
+                excel->selected = excel->selected->right;
+                excel->selected->color = color;
+                modify = true;
+            }
+        }
+};
+
+
 
 int main(){
 
-    printKeyManual();
-
     Excel<string> *excel = new Excel<string>();
+    FrontEnd<string> *frontEnd = new FrontEnd<string>();
+    frontEnd->excel = excel;
+
+    frontEnd->printKeyManual();
     excel->print();
 
     bool running = true, modify = false;
 
     while (running){
-        if (GetAsyncKeyState(VK_UP) && excel->selected->up){
-            excel->selected->color = "\33[37m";
-            excel->selected = excel->selected->up;
-            excel->selected->color = "\33[33m";
-            modify = true;
-        }
-        if (GetAsyncKeyState(VK_DOWN) && excel->selected->down){
-            excel->selected->color = "\33[37m";
-            excel->selected = excel->selected->down;
-            excel->selected->color = "\33[33m";
-            modify = true;
-        }
-        if (GetAsyncKeyState(VK_LEFT) && excel->selected->left){
-            excel->selected->color = "\33[37m";
-            excel->selected = excel->selected->left;
-            excel->selected->color = "\33[33m";
-            modify = true;
-        }
-        if (GetAsyncKeyState(VK_RIGHT) && excel->selected->right){
-            excel->selected->color = "\33[37m";
-            excel->selected = excel->selected->right;
-            excel->selected->color = "\33[33m";
-            modify = true;
-        }
+        frontEnd->arrowMovement("\33[33m", modify);
         if (GetAsyncKeyState(VK_SPACE)){
             cout << "Enter data: ";
             string data;
@@ -938,7 +1222,20 @@ int main(){
             }
         }
         if (GetAsyncKeyState(VK_F1)){
-            // range selection
+            try{
+                // range selection
+                Range<string> *range = new Range<string>();
+                range->excel = excel;
+                range->CellLabeler();
+                frontEnd->RangeSelection(excel, range);
+                range->fillVector();
+                frontEnd->rangeOption(range);
+            }
+            catch(...) {
+                cout << "There must be a type error!" << endl;
+                Sleep(500);
+            }
+            modify = true;
         }
         if (GetAsyncKeyState(VK_ESCAPE)){
             running = false;
@@ -947,7 +1244,7 @@ int main(){
 
         if (modify){
             system("cls");
-            printKeyManual();
+            frontEnd->printKeyManual();
             excel->print();
             modify = false;
         }

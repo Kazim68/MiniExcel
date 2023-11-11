@@ -2,6 +2,9 @@
     "files.associations": {
         "iostream": "cpp",
         "*.rh": "cpp",
-        "ios": "cpp"
+        "ios": "cpp",
+        "xstring": "cpp",
+        "format": "cpp",
+        "vector": "cpp"
     }
 }
