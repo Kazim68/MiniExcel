@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <limits.h>
+#include <math.h>
 using namespace std;
 
 // utility to convert anything to a string
@@ -63,7 +64,7 @@ class Excel {
             this->makeGrid();
         }
 
-        makeGrid(){
+        void makeGrid(){
 
             // after head cell
             Cell<T> *temp = head;
@@ -152,26 +153,30 @@ class Excel {
             }
             else{
                 // this is the first row
-                
-                Cell<T> *newRowHead = new Cell<T>();
-                Cell<T> *temp = head->right;
-                head->up = newRowHead;
-                newRowHead->down = head;
-
-                Cell<T> *curr = newRowHead;
-                for (int i = 1; i < cols; i++){
-                    Cell<T> *newCell = new Cell<T>();
-                    newCell->left = curr;
-                    curr->right = newCell;
-                    temp->up = newCell;
-                    newCell->down = temp;
-                    temp = temp->right;
-                    curr = newCell;
-                }
-
-                head = newRowHead;
+                makeNewRowAtTop();
             }
             rows++;
+        }
+
+        void makeNewRowAtTop(){
+            Cell<T> *newRowHead = new Cell<T>();
+            Cell<T> *temp = head->right;
+            head->up = newRowHead;
+            newRowHead->down = head;
+
+            Cell<T> *curr = newRowHead;
+            for (int i = 1; i < cols; i++){
+                Cell<T> *newCell = new Cell<T>();
+                newCell->left = curr;
+                curr->right = newCell;
+                temp->up = newCell;
+                newCell->down = temp;
+
+                temp = temp->right;
+                curr = newCell;
+            }
+
+            head = newRowHead;
         }
 
         void insertBelow(){
@@ -217,13 +222,18 @@ class Excel {
             }
             else{
                 // this is the last row
-                makeNewRowAtBottom(rowHead);
+                makeNewRowAtBottom();
 
             }
             rows++;
         }
 
-        void makeNewRowAtBottom(Cell<T> *rowHead){
+        void makeNewRowAtBottom(){
+            Cell<T> *rowHead = head;
+            while (rowHead->down != nullptr){
+                rowHead = rowHead->down;
+            }
+
             Cell<T> *newRowHead = new Cell<T>();
             Cell<T> *temp = rowHead->right;
             rowHead->down = newRowHead;
@@ -277,13 +287,18 @@ class Excel {
             }
             else{
                 // if it is the last column
-                makeNewColumnAtRight(colHead);
+                makeNewColumnAtRight();
             }
 
             cols++;
         }
 
-        void makeNewColumnAtRight(Cell<T> *colHead){
+        void makeNewColumnAtRight(){
+            Cell<T> *colHead = head;
+            while (colHead->right != nullptr){
+                colHead = colHead->right;
+            }
+
             Cell<T> *newColHead = new Cell<T>();
             Cell<T> *temp = colHead->down;
             colHead->right = newColHead;
@@ -338,13 +353,15 @@ class Excel {
             }
             else{
                 // if this is the first column
-                makeNewColumnAtLeft(colHead);
+                makeNewColumnAtLeft();
                 
             }
             cols++;
         }
 
-        void makeNewColumnAtLeft(Cell<T> *colHead){
+        void makeNewColumnAtLeft(){
+            Cell<T> *colHead = head;
+
             Cell<T> *newColHead = new Cell<T>();
             Cell<T> *temp = colHead->down;
             colHead->left = newColHead;
@@ -379,7 +396,7 @@ class Excel {
 
             // now temp is the top right most cell
             // inserting a new column at the right most end
-            makeNewColumnAtRight(temp);
+            makeNewColumnAtRight();
 
             // from selected cell, right shift all the cells
             Cell<T> *current = selected;
@@ -461,7 +478,7 @@ class Excel {
 
             // now temp is the bottom left most cell
             // inserting a new row at the bottom most end
-            makeNewRowAtBottom(temp);
+            makeNewRowAtBottom();
 
             // from selected cell, down shift all the cells
             Cell<T> *current = selected;
@@ -876,7 +893,7 @@ class Range{
         }
 
         void fillVector(){
-            // if start is at right of end and above
+            // if end is at right of start and above
             if (start->col <= end->col && start->row >= end->row){
                 Cell<T> *temp = start;
                 Cell<T> *rowTraverser = temp;
@@ -890,7 +907,7 @@ class Range{
                 }
             }
             else if (start->col <= end->col && start->row < end->row){
-                // if start is at right of end and below
+                // if end is at right of start and below
                 Cell<T> *temp = start;
                 Cell<T> *rowTraverser = temp;
                 for (int i = start->row; i <= end->row; i++){
@@ -903,7 +920,7 @@ class Range{
                 }
             }
             else if (start->col > end->col && start->row > end->row){
-                // if start is at left of end and above
+                // if start is at right of end and below
                 Cell<T> *temp = start;
                 Cell<T> *rowTraverser = temp;
                 for (int i = start->row; i >= end->row; i--){
@@ -916,7 +933,7 @@ class Range{
                 }
             }
             else if (start->col > end->col && start->row < end->row){
-                // if start is at left of end and below
+                // if start is at right of end and above
                 Cell<T> *temp = start;
                 Cell<T> *rowTraverser = temp;
                 for (int i = start->row; i <= end->row; i++){
@@ -942,7 +959,7 @@ class Range{
         }
 
         float calculateAverage(){
-            return calculateSum() / cells->size();
+            return round(((float)calculateSum() / cells->size()) * 10) / 10.0;
         }
 
         int calculateCount(){
@@ -990,6 +1007,118 @@ class Range{
                 cells->at(i)->data = "0";
             }
         }
+
+        void paste(){
+            int idx = data->size() - 1;
+
+            // end is at the top left corner of selection rectangle
+            if (end->col <= start->col && end->row <= start->row){
+                Cell<T> *temp = excel->selected;
+                Cell<T> *rowTraverser = temp;
+
+                for (int i = end->row; i <= start->row; i++){
+                    for (int j = end->col; j <= start->col; j++){
+                        rowTraverser->data = data->at(idx);
+                        idx--;
+                        if (rowTraverser->right == nullptr){
+                            excel->makeNewColumnAtRight();
+                            excel->cols++;
+                        }
+                        rowTraverser = rowTraverser->right;
+                    }
+                    if (rowTraverser->down == nullptr){
+                        excel->makeNewRowAtBottom();
+                        excel->rows++;
+                    }
+                    temp = temp->down;
+                    rowTraverser = temp;
+                }
+            }
+
+            // end is left and below start
+            if (start->col > end->col && start->row < end->row){
+                Cell<T> *temp = excel->selected;
+                Cell<T> *rowTraverser = temp;
+
+                int idx = start->col - end->col + 1;
+                int c = 1;
+
+                for (int i = start->row; i <= end->row; i++){
+                    for (int j = start->col; j >= end->col; j--){
+                        rowTraverser->data = data->at(idx-1);
+                        idx--;
+                        if (rowTraverser->right == nullptr){
+                            excel->makeNewColumnAtRight();
+                            excel->cols++;
+                        }
+                        rowTraverser = rowTraverser->right;
+                    }
+                    c++;
+                    idx = c * (start->col - end->col + 1);
+                    if (rowTraverser->down == nullptr){
+                        excel->makeNewRowAtBottom();
+                        excel->rows++;
+                    }
+                    temp = temp->down;
+                    rowTraverser = temp;
+                }
+            }
+
+            // end is right and below start
+            if (start->col <= end->col && start->row < end->row){
+                Cell<T> *temp = excel->selected;
+                Cell<T> *rowTraverser = temp;
+
+                int idx = 0;
+
+                for (int i = start->row; i <= end->row; i++){
+                    for (int j = start->col; j <= end->col; j++){
+                        rowTraverser->data = data->at(idx);
+                        idx++;
+                        if (rowTraverser->right == nullptr){
+                            excel->makeNewColumnAtRight();
+                            excel->cols++;
+                        }
+                        rowTraverser = rowTraverser->right;
+                    }
+                    if (rowTraverser->down == nullptr){
+                        excel->makeNewRowAtBottom();
+                        excel->rows++;
+                    }
+                    temp = temp->down;
+                    rowTraverser = temp;
+                }
+            }
+
+            // end is right and above start
+            if (start->col <= end->col && start->row >= end->row){
+                Cell<T> *temp = excel->selected;
+                Cell<T> *rowTraverser = temp;
+
+                int c = start->row - end->row;
+                int idx = c * (end->col - start->col + 1);
+
+                for (int i = start->row; i >= end->row; i--){
+                    for (int j = start->col; j <= end->col; j++){
+                        rowTraverser->data = data->at(idx);
+                        idx++;
+                        if (rowTraverser->right == nullptr){
+                            excel->makeNewColumnAtRight();
+                            excel->cols++;
+                        }
+                        rowTraverser = rowTraverser->right;
+                    }
+                    c--;
+                    idx = c * (end->col - start->col + 1);
+                    if (rowTraverser->down == nullptr){
+                        excel->makeNewRowAtBottom();
+                        excel->rows++;
+                    }
+                    temp = temp->down;
+                    rowTraverser = temp;
+                }
+            }
+        }
 };
 
 template <typename T>
@@ -1034,7 +1163,7 @@ class FrontEnd{
             cout << "Select Starting cell..." << endl;
 
             bool selecting = true, modify = false;
-            Sleep(50);
+            Sleep(100);
             while (selecting){
                 arrowMovement("\33[35m", modify);
                 if (GetAsyncKeyState(VK_F1)){
@@ -1082,40 +1211,78 @@ class FrontEnd{
             cout << "3. Count" << endl;
             cout << "4. Max" << endl;
             cout << "5. Min" << endl;
-            cout << "6. Copy" << endl;
-            cout << "7. Cut" << endl;
+            cout << "6. Copy/Paste" << endl;
+            cout << "7. Cut/Paste" << endl;
             cout << "0. Back" << endl;
             cout << "Enter option:";
             cin >> option;
 
             if (option == "1"){
                 // sum
-                excel->selected->data = to_string(range->calculateSum());
+                excel->selected->data = validString(to_string(range->calculateSum()));
             }
             else if (option == "2"){
                 // avg
-                excel->selected->data = to_string(range->calculateAverage());
+                excel->selected->data = validString(to_string(range->calculateAverage()));
             }
             else if (option == "3"){
                 // count
-                excel->selected->data = to_string(range->calculateCount());
+                excel->selected->data = validString(to_string(range->calculateCount()));
             }
             else if (option == "4"){
                 // max
-                excel->selected->data = to_string(range->calculateMax());
+                excel->selected->data = validString(to_string(range->calculateMax()));
             }
             else if (option == "5"){
                 // min
-                excel->selected->data = to_string(range->calculateMin());
+                excel->selected->data = validString(to_string(range->calculateMin()));
             }
             else if (option == "6"){
                 // copy
                 range->copy();
+                range->paste();
             }
             else if (option == "7"){
                 // cut
                 range->cut();
-            }   
+                range->paste();
+            }
+            else{
+                cout << "Invalid option!" << endl;
+                cout << "Reverting back to main screen" << endl;
+                Sleep(500);
+            }
+        }
+
+        string validString(string data){
+            string temp = "";
+            if (data.length() > 4){
+                for (int i = 0; i < 4; i++){
+                    temp += data[i];
+                }
+                return temp;
+            }
+            return data;
+        }
+
+        string takeValidData(){
+            cout << "Enter data: ";
+            string data;
+            cin >> data;
+            if (contains(data, ',')){
+                cout << "Invalid input!" << endl;
+                return takeValidData();
+            }
+            return validString(data);
+        }
+
+        bool contains(string data, char c){
+            for (int i = 0; i < data.length(); i++){
+                if (data[i] == c){
+                    return true;
+                }
+            }
+            return false;
         }
 
         void arrowMovement(string color, bool &modify){
@@ -1162,12 +1329,7 @@ int main(){
     while (running){
         frontEnd->arrowMovement("\33[33m", modify);
         if (GetAsyncKeyState(VK_SPACE)){
-            cout << "Enter data: ";
-            string data;
-            cin >> data;
-            excel->selected->data = data;
-            cin.ignore();
-
+            excel->selected->data = frontEnd->takeValidData();
             modify = true;
         }
         else if (GetAsyncKeyState(VK_CONTROL)){

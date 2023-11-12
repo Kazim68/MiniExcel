@@ -5,6 +5,8 @@
         "ios": "cpp",
         "xstring": "cpp",
         "format": "cpp",
-        "vector": "cpp"
+        "vector": "cpp",
+        "cmath": "cpp",
+        "limits": "cpp"
     }
 }
